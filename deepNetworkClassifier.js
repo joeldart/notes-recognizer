@@ -4,7 +4,21 @@ var deepNetworkClassifier = function (numClasses){
     this.getNumClasses = function () {
         return this.examples > 10 ? 1: 0;
     };
-    this.addExample = function (example, label) {
+    this.model = null;
+    this.truncatedMobileNet = null;
+    this.init = async function () {
+      const mobilenet = await tf.loadLayersModel(
+          'https://storage.googleapis.com/tfjs-models/tfjs/mobilenet_v1_0.25_224/model.json');
+    
+      // Return a model that outputs an internal activation.
+      const layer = mobilenet.getLayer('conv_pw_13_relu');
+      this.truncatedMobileNet= tf.model({inputs: mobilenet.inputs, outputs: layer.output});
+
+    };
+    this.addExample = function (canvas, label) {
+        const input = this.fromCanvas(canvas);
+        const example = this.truncatedMobileNet.predict(input);
+      
         // One-hot encode the label.
         const y = tf.tidy(
             () => tf.oneHot(tf.tensor1d([label]).toInt(), this.numClasses));
@@ -39,7 +53,7 @@ var deepNetworkClassifier = function (numClasses){
           //out, so for example, you would call var activation = net.infer, and then get activation.shape
           //and that's what should be passed in here. might even make inputShape get passed in so 
           //we dont have to worry about it
-          inputShape = this.xs.shape.slice(1);//[7, 7, 1024];
+          inputShape = this.truncatedMobileNet.outputs[0].shape.slice(1);//this.xs.shape.slice(1);//[7, 7, 1024];
         
           if (! this.model)
           {
@@ -57,7 +71,7 @@ var deepNetworkClassifier = function (numClasses){
                   units: 100,//how many hidden neurons, this is the default, and what we should use
                   activation: 'relu',
                   kernelInitializer: 'varianceScaling',
-                  useBias: true //bias it like the b in y=mx + b and for these internal layers it should be used
+                  useBias: true //bias is like the b in y=mx + b and for these internal layers it should be used
                         //note this is NOT the bias like bias vs variance trade off
                 }),
                 // Layer 2. The number of units of the last layer should correspond
@@ -102,7 +116,25 @@ var deepNetworkClassifier = function (numClasses){
           });
     };
 
-    this.predictClass = async function predictClass(activation) {
+    this.fromCanvas = function (canvas){
+      const img = tf.browser.fromPixels(canvas);
+      //note: per https://github.com/tensorflow/tfjs-examples/blob/master/webcam-transfer-learning/index.html#L122
+      //we just have to assume the canvas input is the same size currently. I suspect there's a different strategy
+      //for resizing to match down, but would it be worth it, perf-wize?
+      const processedImg =
+      tf.tidy(() => img.expandDims(0).toFloat().div(127).sub(1));
+  img.dispose();
+      return processedImg;
+    };
+
+    this.predictClass = async function predictClass(img){
+      const input = this.fromCanvas(img);
+      const embeddings= this.truncatedMobileNet.predict(input);
+      const result= this.predictClassInternal(embeddings);
+      embeddings.dispose();
+      return result;      
+    };
+    this.predictClassInternal = async function predictClassInternal(activation) {
          // Make a prediction through our newly-trained model using the activation
       // from mobilenet as input.
       const predictions = this.model.predict(activation);

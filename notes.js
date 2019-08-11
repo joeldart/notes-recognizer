@@ -1,8 +1,7 @@
-let net;
 //const classifier = knnClassifier.create();
 const classes = ['Whole note', 'Half Note', 'Quarter Note', "Eighth Note", "Whole Rest", "Half Rest", "Sharp", "Flat"];
 const classifier = new deepNetworkClassifier(classes.length);
-var snippedLayer = "conv_preds";//"conv_pw_13_relu";//"conv_preds";
+var snippedLayer = true;//"conv_preds";//"conv_pw_13_relu";//"conv_preds";
 var hasClassified = false;
 var training = false;
 var lastPt,
@@ -34,11 +33,14 @@ async function sleep(timeout) {
     setTimeout(resolve, timeout);
   });
 }
+// Loads mobilenet and returns a model that returns the internal activation
+// we'll use as input to our classifier model.
+
 
   async function app() {
     // Load the model.
     document.getElementById('console').innerText = "loading...";
-    net = await mobilenet.load();
+    await classifier.init();////await mobilenet.load();
     document.getElementById('console').innerText = "";
     
 
@@ -53,10 +55,9 @@ async function sleep(timeout) {
     tf.tidy(()=>{
       // Get the intermediate activation of MobileNet 'conv_preds' and pass that
       // to the KNN classifier.
-      const activation = net.infer(canvas, snippedLayer);
 
       // Pass the intermediate activation to the classifier.
-      classifier.addExample(activation, classId);
+      classifier.addExample(canvas, classId);
       hasClassified = false;
       document.getElementById('console').innerText = "";
     });
@@ -82,11 +83,7 @@ async function sleep(timeout) {
       }
       try
       {
-        // Get the activation from mobilenet from the webcam.
-        const activation = net.infer(canvas, snippedLayer);
-        
-        // Get the most likely class and confidences from the classifier module.
-        const result = await classifier.predictClass(activation);
+        const result = await classifier.predictClass(canvas);
 /*
     <button id="class-a">Add Whole Note</button>
     <button id="class-b">Add Half Note</button>
@@ -101,7 +98,6 @@ async function sleep(timeout) {
           prediction: ${classes[result.classIndex]}\n
           probability: ${result.confidences[result.classIndex]}
         `;
-        activation.dispose();
         
       }catch(err){
         console.log(err);
