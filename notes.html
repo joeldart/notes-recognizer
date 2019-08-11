@@ -1,0 +1,26 @@
+<html>
+  <head>
+    <!--https://kiosk-dot-codelabs-site.appspot.com/codelabs/tensorflowjs-teachablemachine-codelab/index.html?index=..%2F..%2Findex#2-->
+    <!-- Load the latest version of TensorFlow.js -->
+    <script src="https://unpkg.com/@tensorflow/tfjs"></script>
+    <script src="https://unpkg.com/@tensorflow-models/mobilenet"></script>
+    <script src="https://unpkg.com/@tensorflow-models/knn-classifier"></script>
+    <script src="deepNetworkClassifier.js"></script>
+  </head>
+  <body>
+    <canvas id="notes" width="240" height="240" style="outline:1px solid black"></canvas>
+    <button id="clear">clear</button>
+    <button id="class-a">Add Whole Note</button>
+    <button id="class-b">Add Half Note</button>
+    <button id="class-c">Add Quarter Note</button>
+    <button id="class-d">Add Eighth Note</button>
+    <button id="class-e">Add Whole Rest</button>
+    <button id="class-f">Add Half Rest</button>
+    <button id="class-g">Add Sharp</button>
+    <button id="class-h">Add Flat</button>
+    <div id="console"></div>
+    
+
+    <script src="notes.js"></script>
+  </body>
+</html>
