@@ -130,7 +130,7 @@ function MusicRecognizer () {
         if (lineBelow - lineAbove > 2){
             pitchNum = topLine - ((lineAbove +1  ) * 2 -1);
         } else if (onTheLine){
-            pitchNum = topLine - (lineAbove + 2) * 2;
+            pitchNum = topLine - (lineAbove*2);
         } else {
             pitchNum = topLine - ((lineAbove * 2) - 1);//note: there's a translation between zero-and-one-based we ahve to do
         }

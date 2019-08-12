@@ -26,6 +26,20 @@ var tests =
         if (rec.musicalObjects[0].pitch !== "C5") throw new Error("did not place pitch correctly");
         if (rec.musicalObjects[0].measure !== 0) throw new Error("did not place in correct measure");
         if (rec.musicalObjects[0].startBeat !== 0) throw new Erro("did not place in correct beat"); 
+    },
+    sharp_on_the_line: function (){
+        var rec = new MusicRecognizer();
+        rec.onClassify({
+            classification: "sharp",
+            //this ones sloppy but it's centered over D4 still
+            stroke: [{x:20,y:50},{x:40,y:70}],
+            musicalObjects:[]
+        });
+        if (rec.musicalObjects.length !== 1)throw new Error("did not add to objects");
+        if (rec.musicalObjects[0].objectName !== "sharp" ) throw new Error("did not recognize the sharp");
+        if (rec.musicalObjects[0].pitch !== "B5") throw new Error("did not place pitch correctly");
+        if (rec.musicalObjects[0].measure !== 0) throw new Error("did not place in correct measure");
+        if (rec.musicalObjects[0].startBeat !== 0) throw new Erro("did not place in correct beat"); 
     }
 };
 for(var test of Object.keys(tests)){
