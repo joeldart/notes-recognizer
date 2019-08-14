@@ -10,14 +10,17 @@ function Classifier(){
     };
 }
 
+import classificationCombiner from '/classificationCombiner.js';
+
+
 function MusicRecognizer () {
     var musicRecognizer = this;
 
     var drawing = new DrawOnCanvas();
     musicRecognizer.drawing = drawing;
     var predictCanvas = document.createElement("CANVAS");
-    predictCanvas.width = "224px";
-    predictCanvas.height = "224px";
+    predictCanvas.style.width = "224px";
+    predictCanvas.style.height = "224px";
     var predictDrawer = new DrawCanvas(predictCanvas);
     musicRecognizer.predictCanvas = predictCanvas;
     musicRecognizer.predictDrawer = predictDrawer;
@@ -27,6 +30,23 @@ function MusicRecognizer () {
     musicRecognizer.musicalObjects = [];
 
     musicRecognizer.isNewMusicalObject = function (classification){
+        //its situations like this that I really wonder if it's 
+        //not both faster and better to train a classifier.
+        //lets start with a hacky heuristic and then compare 
+        //performance later!
+        if (classification.classification === "noteStem"){
+            var couldCombine = musicRecognizer.musicalObjects.filter(obj=>[
+                "wholeNote",
+                "noteHead"
+            ].indexOf(obj.classification) !== -1).length === 0;
+            var isCloseEnough = true;//for now
+            return couldCombine && isCloseEnough;
+        } else if (classification.classification === "sharp"){
+            return true;//somewhat presumes
+        } else if (classification.classification === "flat"){
+            return true;
+        }
+
         //hardcode right now as if each classification is unique
         //of course in reality that's not the case. some classifications are indeed terminal. 
         //such as # or b but most such as whole-note are easily transformed into half-note with
@@ -40,20 +60,26 @@ function MusicRecognizer () {
         //algorithm here: 
         //determine if this classification is a new musicalObject or belongs to an existing musicalObject
         //  todo: create heuristic for sorting current/new
-        if (musicRecognizer.isNewMusicalObject(classification)){
-            var classifications = [classification];
-            var newObject = {
-                objectName: musicRecognizer.objectNameFromClassifications(classifications),
-                pitch: musicRecognizer.pitchFromClassifications(classifications),
-                measure: musicRecognizer.measureFromClassifications(classifications),
-                startBeat: musicRecognizer.startBeatFromClassifications(classifications),
-                classifications: classifications
-            };
+        var toCombineObj = classificationCombiner.getBestObjectToCombine(classification, musicRecognizer.musicalObjects);
+        var classifications = [classification];
+        var newObject = {
+            objectName: musicRecognizer.objectNameFromClassifications(classifications),
+            pitch: musicRecognizer.pitchFromClassifications(classifications),
+            measure: musicRecognizer.measureFromClassifications(classifications),
+            startBeat: musicRecognizer.startBeatFromClassifications(classifications),
+            classifications: classifications
+        };
+        if (!toCombineObj){
             classification.musicalObjects.push(newObject);
             musicRecognizer.musicalObjects.push(newObject);
         } else {
             //look up the existing musicalObject
             //and re-classify according to the new classification
+            var combinedObject = classificationCombiner.combineObjects(toCombineObj, newObject);
+            musicRecognizer.musicalObjects = musicRecognizer.musicalObjects.filter(function(obj){
+                return obj != toCombineObj;
+            });
+            musicRecognizer.musicalObjects.push(combinedObject);
         }
     };
     musicRecognizer.onReclassify = function(classification){
@@ -213,3 +239,4 @@ function MusicRecognizer () {
     return musicRecognizer;
 }
 
+export default MusicRecognizer;
