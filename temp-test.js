@@ -71,7 +71,7 @@ var tests =
         if (rec.musicalObjects[0].objectName !== "halfNote" ) throw new Error("did not recognize the halfNote");
         if (rec.musicalObjects[0].pitch !== "C5") throw new Error("did not place pitch correctly");
         if (rec.musicalObjects[0].measure !== 0) throw new Error("did not place in correct measure");
-        if (rec.musicalObjects[0].startBeat !== 0) throw new Erro("did not place in correct beat");                 
+        if (rec.musicalObjects[0].startBeat !== 0) throw new Error("did not place in correct beat");                 
     },
     two_halfNotes_recognize_the_relative_startBeat: function () {
         var rec = new MusicRecognizer();
@@ -103,9 +103,140 @@ var tests =
         if (rec.musicalObjects[1].objectName !== "halfNote" ) throw new Error("did not recognize the halfNote");
         if (rec.musicalObjects[1].pitch !== "C5") throw new Error("did not place pitch correctly");
         if (rec.musicalObjects[1].measure !== 0) throw new Error("did not place in correct measure");
-        if (rec.musicalObjects[1].startBeat !== 3) throw new Error("did not place in correct beat");                 
+        if (rec.musicalObjects[1].startBeat !== 2) throw new Error("did not place in correct beat");                 
     },
-    
+    two_halfNotes_can_be_written_heads_first_andstill_recognize_the_relative_startBeat: function () {
+        var rec = new MusicRecognizer();
+        rec.onClassify({
+            classification: "wholeNote",
+            stroke: [{x:40,y:41},{x:60,y:59}],
+            musicalObjects:[]
+        });
+        rec.onClassify({
+            classification: "wholeNote",
+            stroke: [{x:80,y:41},{x:100,y:59}],
+            musicalObjects:[]
+        });
+        rec.onClassify({
+            classification: "noteStem",
+            stroke: [{x:40, y: 41}, { x: 40, y: 100}],
+            musicalObjects: []
+        });
+        rec.onClassify({
+            classification: "noteStem",
+            stroke: [{x:80, y: 41}, { x: 80, y: 100}],
+            musicalObjects: []
+        });
+        if (rec.musicalObjects.length !== 2)throw new Error("did not reclassify the musical objects");
+        if (rec.musicalObjects[0].objectName !== "halfNote" ) throw new Error("did not recognize the halfNote");
+        if (rec.musicalObjects[0].pitch !== "C5") throw new Error("did not place pitch correctly");
+        if (rec.musicalObjects[0].measure !== 0) throw new Error("did not place in correct measure");
+        if (rec.musicalObjects[0].startBeat !== 0) throw new Error("did not place in correct beat");                 
+        if (rec.musicalObjects[1].objectName !== "halfNote" ) throw new Error("did not recognize the halfNote");
+        if (rec.musicalObjects[1].pitch !== "C5") throw new Error("did not place pitch correctly");
+        if (rec.musicalObjects[1].measure !== 0) throw new Error("did not place in correct measure");
+        if (rec.musicalObjects[1].startBeat !== 2) throw new Error("did not place in correct beat");                 
+    },
+    three_quarterNotes_can_add_stems_in_the_opposite_order_andstill_recognize_the_relative_startBeat: function () {
+        var rec = new MusicRecognizer();
+        rec.onClassify({
+            classification: "noteHead",
+            stroke: [{x:40,y:41},{x:60,y:59}],
+            musicalObjects:[]
+        });
+        rec.onClassify({
+            classification: "noteHead",
+            stroke: [{x:80,y:41},{x:100,y:59}],
+            musicalObjects:[]
+        });
+        rec.onClassify({
+            classification: "noteHead",
+            stroke: [{x:110,y:41},{x:130,y:59}],
+            musicalObjects:[]
+        });
+        rec.onClassify({
+            classification: "noteStem",
+            stroke: [{x:110, y: 41}, { x: 110, y: 100}],
+            musicalObjects: []
+        });
+        rec.onClassify({
+            classification: "noteStem",
+            stroke: [{x:80, y: 41}, { x: 80, y: 100}],
+            musicalObjects: []
+        });
+        rec.onClassify({
+            classification: "noteStem",
+            stroke: [{x:40, y: 41}, { x: 40, y: 100}],
+            musicalObjects: []
+        });
+        if (rec.musicalObjects.length !== 3)throw new Error("did not reclassify the musical objects");
+        if (rec.musicalObjects[0].objectName !== "quarterNote" ) throw new Error("did not recognize the quarterNote");
+        if (rec.musicalObjects[0].pitch !== "C5") throw new Error("did not place pitch correctly");
+        if (rec.musicalObjects[0].measure !== 0) throw new Error("did not place in correct measure");
+        if (rec.musicalObjects[0].startBeat !== 0) throw new Error("did not place in correct beat");                 
+        if (rec.musicalObjects[1].objectName !== "quarterNote" ) throw new Error("did not recognize the quarterNote");
+        if (rec.musicalObjects[1].pitch !== "C5") throw new Error("did not place pitch correctly");
+        if (rec.musicalObjects[1].measure !== 0) throw new Error("did not place in correct measure");
+        if (rec.musicalObjects[1].startBeat !== 1) throw new Error("did not place in correct beat");                 
+        if (rec.musicalObjects[2].objectName !== "quarterNote" ) throw new Error("did not recognize the quarterNote");
+        if (rec.musicalObjects[2].pitch !== "C5") throw new Error("did not place pitch correctly");
+        if (rec.musicalObjects[2].measure !== 0) throw new Error("did not place in correct measure");
+        if (rec.musicalObjects[2].startBeat !== 2) throw new Error("did not place in correct beat");                 
+    },
+    two_halfNotes_can_share_the_same_stem: function () {
+        var rec = new MusicRecognizer();
+        rec.onClassify({
+            classification: "wholeNote",
+            stroke: [{x:40,y:41},{x:60,y:59}],
+            musicalObjects:[]
+        });
+        rec.onClassify({
+            classification: "wholeNote",
+            stroke: [{x:40,y:61},{x:60,y:79}],
+            musicalObjects:[]
+        });
+        rec.onClassify({
+            classification: "noteStem",
+            stroke: [{x:40, y: 41}, { x: 40, y: 100}],
+            musicalObjects: []
+        });
+        if (rec.musicalObjects.length !== 2)throw new Error("did not reclassify the musical objects");
+        if (rec.musicalObjects[0].objectName !== "halfNote" ) throw new Error("did not recognize the halfNote");
+        if (rec.musicalObjects[0].pitch !== "C5") throw new Error("did not place pitch correctly");
+        if (rec.musicalObjects[0].measure !== 0) throw new Error("did not place in correct measure");
+        if (rec.musicalObjects[0].startBeat !== 0) throw new Error("did not place in correct beat");                 
+        if (rec.musicalObjects[1].objectName !== "halfNote" ) throw new Error("did not recognize the halfNote");
+        if (rec.musicalObjects[1].pitch !== "A5") throw new Error("did not place pitch correctly");
+        if (rec.musicalObjects[1].measure !== 0) throw new Error("did not place in correct measure");
+        if (rec.musicalObjects[1].startBeat !== 0) throw new Error("did not place in correct beat");                 
+    },
+    wholeNote_and_halfNote_dont_share_the_same_stem: function () {
+        var rec = new MusicRecognizer();
+        rec.onClassify({
+            classification: "wholeNote",
+            stroke: [{x:40,y:41},{x:60,y:59}],
+            musicalObjects:[]
+        });
+        rec.onClassify({
+            classification: "wholeNote",
+            stroke: [{x:40,y:61},{x:60,y:79}],
+            musicalObjects:[]
+        });
+        rec.onClassify({
+            classification: "noteStem",
+            stroke: [{x:40, y: 61}, { x: 40, y: 120}],
+            musicalObjects: []
+        });
+        if (rec.musicalObjects.length !== 2)throw new Error("did not reclassify the musical objects");
+        if (rec.musicalObjects[0].objectName !== "wholeNote" ) throw new Error("did not recognize the halfNote");
+        if (rec.musicalObjects[0].pitch !== "C5") throw new Error("did not place pitch correctly");
+        if (rec.musicalObjects[0].measure !== 0) throw new Error("did not place in correct measure");
+        if (rec.musicalObjects[0].startBeat !== 0) throw new Error("did not place in correct beat");                 
+        if (rec.musicalObjects[1].objectName !== "halfNote" ) throw new Error("did not recognize the halfNote");
+        if (rec.musicalObjects[1].pitch !== "A5") throw new Error("did not place pitch correctly");
+        if (rec.musicalObjects[1].measure !== 0) throw new Error("did not place in correct measure");
+        if (rec.musicalObjects[1].startBeat !== 0) throw new Error("did not place in correct beat");                 
+    }
 };
 for(var test of Object.keys(tests)){
     try

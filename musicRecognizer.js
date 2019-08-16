@@ -17,6 +17,7 @@ function MusicRecognizer () {
     var musicRecognizer = this;
 
     var drawing = new DrawOnCanvas();
+    musicRecognizer.beatPerMeasure = 4;
     musicRecognizer.drawing = drawing;
     var predictCanvas = document.createElement("CANVAS");
     predictCanvas.style.width = "224px";
@@ -29,45 +30,20 @@ function MusicRecognizer () {
     musicRecognizer.classifiedObjects = [];
     musicRecognizer.musicalObjects = [];
 
-    musicRecognizer.isNewMusicalObject = function (classification){
-        //its situations like this that I really wonder if it's 
-        //not both faster and better to train a classifier.
-        //lets start with a hacky heuristic and then compare 
-        //performance later!
-        if (classification.classification === "noteStem"){
-            var couldCombine = musicRecognizer.musicalObjects.filter(obj=>[
-                "wholeNote",
-                "noteHead"
-            ].indexOf(obj.classification) !== -1).length === 0;
-            var isCloseEnough = true;//for now
-            return couldCombine && isCloseEnough;
-        } else if (classification.classification === "sharp"){
-            return true;//somewhat presumes
-        } else if (classification.classification === "flat"){
-            return true;
-        }
-
-        //hardcode right now as if each classification is unique
-        //of course in reality that's not the case. some classifications are indeed terminal. 
-        //such as # or b but most such as whole-note are easily transformed into half-note with
-        //the addition of an adjascent note-stem classification
-        //probably the most relevant work, then will be creating an isAdjascent
-        //heuristic that performs well-enough to attach related classifications 
-        return true;
-    }
-
     musicRecognizer.onClassify = function(classification){
         //algorithm here: 
         //determine if this classification is a new musicalObject or belongs to an existing musicalObject
         //  todo: create heuristic for sorting current/new
-        var toCombineObj = classificationCombiner.getBestObjectToCombine(classification, musicRecognizer.musicalObjects);
-        var classifications = [classification];
+        var dimensionSet = musicRecognizer.getDimensionSet(classification);
+        var toCombineObj = classificationCombiner.getBestObjectToCombine(classification, musicRecognizer.musicalObjects, dimensionSet);
+        var classifications = [classification];//i dunno i just kinda feel like this data structure is wrong        
         var newObject = {
-            objectName: musicRecognizer.objectNameFromClassifications(classifications),
-            pitch: musicRecognizer.pitchFromClassifications(classifications),
-            measure: musicRecognizer.measureFromClassifications(classifications),
-            startBeat: musicRecognizer.startBeatFromClassifications(classifications),
-            classifications: classifications
+            objectName: musicRecognizer.objectNameFromClassification(classification),
+            pitch: musicRecognizer.pitchFromClassification(classification),
+            measure: musicRecognizer.measureFromClassification(classification),
+            startBeat: musicRecognizer.startBeatFromClassification(classification.classification, dimensionSet),
+            classifications: classifications,
+            dimensionSet: dimensionSet
         };
         if (!toCombineObj){
             classification.musicalObjects.push(newObject);
@@ -79,25 +55,61 @@ function MusicRecognizer () {
             musicRecognizer.musicalObjects = musicRecognizer.musicalObjects.filter(function(obj){
                 return obj != toCombineObj;
             });
+            combinedObject.startBeat = musicRecognizer.startBeatFromClassification(combinedObject.objectName, combinedObject.dimensionSet);            
             musicRecognizer.musicalObjects.push(combinedObject);
+            //now go through and reset all the measure offsets so far
         }
     };
     musicRecognizer.onReclassify = function(classification){
 
     };
 
-    musicRecognizer.objectNameFromClassifications = function (classifications){
-        //hardcoded
-        return classifications[0].classification;
+    musicRecognizer.objectNameFromClassification = function (classification){
+        return classification.classification;
     };
 
-    musicRecognizer.pitchFromClassifications = function (classifications){
+    musicRecognizer.classificationIsNoteHead = function (name){
+        return "wholeNote" || "noteHead";
+    };
+
+    musicRecognizer.getDimensionSet = function (classification){
+        var strokes = classification.stroke;
+        var top = strokes.reduce(function (prev, curr){
+            return Math.min(prev, curr.y);
+        }, 255);
+        var bottom = strokes.reduce(function (prev, curr){
+            return Math.max(prev, curr.y);
+        }, 0);
+        var left = strokes.reduce(function (prev, curr){
+            return Math.min(prev, curr.x);
+        }, 255);
+        var right = strokes.reduce(function (prev, curr){
+            return Math.max(prev, curr.x);
+        }, 0);
+        return {
+            actual: {
+                top: top, 
+                bottom: bottom,
+                left: left,
+                right: right
+            },
+            note: musicRecognizer.classificationIsNoteHead(classification.classification) ? 
+            {
+                top: top, 
+                bottom: bottom,
+                left: left,
+                right: right
+            }: null    
+        };
+    };
+
+    musicRecognizer.pitchFromClassification = function (classification){
         //find dimensions of classifications
         //note: we need to skip some classifications for this consideration 
         //such as noteStem as their dimensions only impact the duration and
         //not the pitch
         var pitchNum;
-        var strokes = classifications.flatMap(c=>c.stroke);
+        var strokes = classification.stroke;
         var top = strokes.reduce(function (prev, curr){
             return Math.min(prev, curr.y);
         }, 255);
@@ -165,7 +177,7 @@ function MusicRecognizer () {
         return ["A","B","C","D","E","F","G"][offset]+octave.toString();
     };
 
-    musicRecognizer.measureFromClassifications = function (classifications){
+    musicRecognizer.measureFromClassification = function (classification){
         //some quick thoughts/realizations on this datastructure eventually
         //we probably, from a ui perspectvie, want to have a draggable measure line
         //the just kind of exists. But then some musicalObjects will change the
@@ -181,10 +193,72 @@ function MusicRecognizer () {
         return 0;
     };
 
-    musicRecognizer.startBeatFromClassifications = function (classifications){
-        return 0;
+    musicRecognizer.startBeatFromClassification = function (name, dimensionSet){
+        //need to make a sane heurisitc classification 
+        //have to sort notes from left-to-right and compare
+        //note: we're goign to continuously be mutating this array. 
+        //if that becomes a problem we'll do it somewhere else
+        //given this operation has to recalculate every time anything changes
+        //(or at least I dont have a good performance optimization in my head yet)
+        //it might make sense for us to do this in a single pass just before playing
+        //the music itself. but, if we do that, we wont be able to display feedback
+        //anywhere about what the predictions currently look like. 
+        //note: a future consideration in this algorithm will be sorting out direction
+        //of "parts" (note stems up/down) as we dont truly have a startBeat outside the
+        //context of which part we are looking at
+        //future: we could maybe have an optimization for this if we are establishing 
+        //different boundaries 
+        if (name === "noteStem") return null;//there's no inherent start beat on these
+        if (name === "wholeNote" && musicRecognizer.beatPerMeasure <= 4) return 0;//till we implement 6/4 time, whole notes start on beat 0
+        musicRecognizer.musicalObjects.sort(function (a,b){
+            return a.dimensionSet.note.left - b.dimensionSet.note.left;
+        });
+        //new thought: should instead we create a new type of combination
+        //called a note cluster in order to add on multiple note heads to the
+        //same stem? that would allow this process to be only needing to sort
+        //between lines? really either we are doing this or we are categorizing
+        //quarter notes that share a common note-stem so yeah, I dunno
+
+        var lastObj;
+        for (var i=0; i<musicRecognizer.musicalObjects.length; i++){
+            var currObj = musicRecognizer.musicalObjects[i];
+            if (currObj.objectName === "sharp" ||
+                currObj.objectName === "flat") {
+                    continue;
+                }
+            //check if the currObject is even with us* or 
+            //past us and so we have found our 
+            //location in the measure
+            if (dimensionSet.note.left === currObj.dimensionSet.left || dimensionSet.note.right <= currObj.dimensionSet.note.left ){
+                break;
+            }
+            lastObj = currObj;
+        }
+        //we have now advanced lastObj till we are past it. 
+        //finally, lets return lastObj
+        if (!lastObj) return 0;
+        return lastObj.startBeat + musicRecognizer.objDuration(lastObj);
     };
     
+    musicRecognizer.objDuration = function (obj){
+        //currently assuming a 4/4 time signature. might instead move 
+        //to startOffset instead of startBeat to avoid semantics
+        switch (obj.objectName){
+            case "wholeRest":
+            case "wholeNote": return 4;
+            case "halfRest":
+            case "halfNote": return 2;
+            case "quarterRest":            
+            case "noteHead": //we presume this
+            case "quarterNote": return 1;
+            case "eighthRest":
+            case "eighthNote": return .5;
+            case "sixteenthRest":
+            case "sixteenthNote": return .4;            
+            default: return 0;
+        }
+    };
+
     musicRecognizer.isNewShape = function (stroke){
         //hardcode currently to assume always a single stroke
         return true;
