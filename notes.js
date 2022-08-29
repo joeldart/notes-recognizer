@@ -5,19 +5,27 @@ var snippedLayer = true;//"conv_preds";//"conv_pw_13_relu";//"conv_preds";
 var hasClassified = false;
 var training = false;
 var lastPt,
-  canvas,
-  context=(canvas=document.querySelector("canvas")).getContext("2d");
+  canvas = document.querySelector("canvas"),
+  context=canvas.getContext("2d"),
+  ;
+var real = getDrawToCanvas(context, canvas.width, canvas.height),
+  display = getDrawToCanvas(context, canvas.width, canvas.height);
+
+
 function mousedown(e){lastPt ={x:e.pageX,y:e.pageY};}
 function mousemove(e){if (lastPt){var curr = {x:e.pageX,y:e.pageY};draw(lastPt, curr);lastPt = curr;}}
 function mouseup(e){mousemove(e);lastPt=null;}
-function draw(pt1,pt2){ pt2 = pt2 || pt1; context.strokeStyle = "#000000"; context.lineJoin = "round"; context.lineWidth = 5; context.beginPath(); context.moveTo(pt1.x, pt1.y); context.lineTo(pt2.x, pt2.y); context.closePath(); context.stroke(); }
+function draw(pt1,pt2){ 
+  real.draw(pt1, p2);
+  display.draw(pt1, pt2);
+ }
 document.getElementById("clear").addEventListener("click", clear);
 initCanvas();
 clear();
 function clear(){
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = "white";
-    context.fillRect(0,0, canvas.width, canvas.height);
+    real.clear();
+    display.clear();
+    display.staffLines();
     lastPt = null;
 }
 
